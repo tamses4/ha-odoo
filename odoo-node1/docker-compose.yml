@@ -1,0 +1,103 @@
+version: '3.8'
+
+# ============================================================
+# TP2 - Nœud Odoo Master 1 (AWS EC2 - AZ1)
+# ============================================================
+
+networks:
+  odoo_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  odoo1_data:
+  odoo1_addons:
+  postgres1_data:
+
+services:
+
+  # ----------------------------------------------------------
+  # PostgreSQL - Base de données locale du nœud 1
+  # Configuré pour la réplication Master-Master via pglogical
+  # ----------------------------------------------------------
+  db1:
+    image: postgres:15
+    container_name: odoo_db1
+    restart: always
+    environment:
+      POSTGRES_DB: odoo
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-OdooSecure@2024}
+      POSTGRES_HOST_AUTH_METHOD: md5
+    volumes:
+      - postgres1_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: >
+      postgres
+        -c wal_level=logical
+        -c max_replication_slots=10
+        -c max_wal_senders=10
+        -c shared_preload_libraries=pglogical
+        -c wal_keep_size=512
+    ports:
+      - "5432:5432"
+    networks:
+      odoo_network:
+        ipv4_address: 172.20.0.2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d odoo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Odoo 17 (version stable disponible - proxy pour Odoo 19)
+  # ----------------------------------------------------------
+  odoo1:
+    image: odoo:17
+    container_name: odoo_app1
+    restart: always
+    depends_on:
+      db1:
+        condition: service_healthy
+    environment:
+      HOST: db1
+      PORT: 5432
+      USER: odoo
+      PASSWORD: ${DB_PASSWORD:-OdooSecure@2024}
+    volumes:
+      - odoo1_data:/var/lib/odoo
+      - odoo1_addons:/mnt/extra-addons
+      - ./odoo.conf:/etc/odoo/odoo.conf:ro
+    ports:
+      - "8069:8069"
+      - "8072:8072"   # Longpolling
+    networks:
+      odoo_network:
+        ipv4_address: 172.20.0.3
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8069/web/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ----------------------------------------------------------
+  # HAProxy - Load Balancer local (optionnel sur chaque nœud)
+  # ----------------------------------------------------------
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: odoo_haproxy1
+    restart: always
+    depends_on:
+      - odoo1
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "80:80"
+      - "8404:8404"   # Stats HAProxy
+    networks:
+      odoo_network:
+        ipv4_address: 172.20.0.10

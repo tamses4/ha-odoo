@@ -1,0 +1,4 @@
+.env
+*.log
+postgres*_data/
+odoo*_data/

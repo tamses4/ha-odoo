@@ -1,0 +1,92 @@
+version: '3.8'
+
+# ============================================================
+# TP2 - Nœud Odoo Master 2 (Local / EC2 AZ2)
+# ============================================================
+
+networks:
+  odoo_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+
+volumes:
+  odoo2_data:
+  odoo2_addons:
+  postgres2_data:
+
+services:
+
+  db2:
+    image: postgres:15
+    container_name: odoo_db2
+    restart: always
+    environment:
+      POSTGRES_DB: odoo
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-OdooSecure@2024}
+      POSTGRES_HOST_AUTH_METHOD: md5
+    volumes:
+      - postgres2_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    command: >
+      postgres
+        -c wal_level=logical
+        -c max_replication_slots=10
+        -c max_wal_senders=10
+        -c shared_preload_libraries=pglogical
+        -c wal_keep_size=512
+    ports:
+      - "5433:5432"
+    networks:
+      odoo_network:
+        ipv4_address: 172.21.0.2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d odoo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  odoo2:
+    image: odoo:17
+    container_name: odoo_app2
+    restart: always
+    depends_on:
+      db2:
+        condition: service_healthy
+    environment:
+      HOST: db2
+      PORT: 5432
+      USER: odoo
+      PASSWORD: ${DB_PASSWORD:-OdooSecure@2024}
+    volumes:
+      - odoo2_data:/var/lib/odoo
+      - odoo2_addons:/mnt/extra-addons
+      - ./odoo.conf:/etc/odoo/odoo.conf:ro
+    ports:
+      - "8069:8069"
+      - "8072:8072"
+    networks:
+      odoo_network:
+        ipv4_address: 172.21.0.3
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8069/web/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: odoo_haproxy2
+    restart: always
+    depends_on:
+      - odoo2
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "80:80"
+      - "8404:8404"
+    networks:
+      odoo_network:
+        ipv4_address: 172.21.0.10
