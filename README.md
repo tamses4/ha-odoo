@@ -110,7 +110,8 @@ nano .env  # Remplir NODE1_IP et NODE2_IP
 ssh ec2-user@<EC2_NODE1_IP>
 
 # Cloner le dépôt et déployer
-git clone <votre-repo> && cd tp2/odoo-node1
+https://github.com/tamses4/ha-odoo.git
+git clone https://github.com/tamses4/ha-odoo.git && cd tp2/odoo-node1
 docker compose up -d
 
 # Vérifier le démarrage
