@@ -144,8 +144,8 @@ docker compose logs -f odoo2
 
 ```bash
 # Configurer les IPs
-export NODE1_IP=<EC2_NODE1_VPN_IP>
-export NODE2_IP=<LOCAL_VPN_IP>
+export NODE1_IP=10.78.152.1
+export NODE2_IP=10.78.152.3
 
 # Lancer le script de réplication
 chmod +x scripts/setup-replication.sh
@@ -184,7 +184,7 @@ Sortie attendue :
 docker stop odoo_app1 odoo_db1
 
 # Vérifier que le nœud 2 répond toujours
-curl http://<NODE2_IP>:8069/web/health
+curl http://10.78.152.1:8069/web/health
 
 # Créer un enregistrement sur le nœud 2 pendant la panne
 # (via l'interface Odoo du nœud 2)

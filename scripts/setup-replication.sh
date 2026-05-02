@@ -8,8 +8,9 @@
 set -e
 
 # ---- VARIABLES - ADAPTER SELON VOTRE ENVIRONNEMENT --------
-NODE1_IP="${NODE1_IP:-<EC2_NODE1_IP>}"       # IP publique ou VPN du nœud 1
-NODE2_IP="${NODE2_IP:-<NODE2_VPN_IP>}"       # IP VPN du nœud 2 (local)
+NODE1_IP="${NODE1_IP:-10.78.152.1}"       # IP publique ou VPN du nœud 1
+NODE2_IP="${NODE2_IP:-10.78.152.3}"
+
 DB_PORT="5432"
 DB_USER="odoo"
 DB_PASS="${DB_PASSWORD:-OdooSecure@2024}"

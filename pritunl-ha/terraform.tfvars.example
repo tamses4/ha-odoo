@@ -1,0 +1,25 @@
+# Copiez ce fichier en "terraform.tfvars" et remplissez les valeurs
+
+region = "eu-west-1"
+
+# Obtenez l'AMI Amazon Linux 2 pour votre région :
+# aws ec2 describe-images --owners amazon \
+#   --filters "Name=name,Values=amzn2-ami-hvm-*-x86_64-gp2" \
+#             "Name=state,Values=available" \
+#   --query 'sort_by(Images, &CreationDate)[-1].ImageId' \
+#   --output text --region eu-west-1
+ami_id = "ami-XXXXXXXXXXXXXXXXX"
+
+# Nom de votre Key Pair EC2 (créé dans la console AWS)
+key_name = "my-keypair"
+
+# Laissez vide pour un test sans HTTPS, ou mettez l'ARN ACM :
+# acm_certificate_arn = "arn:aws:acm:eu-west-1:123456789:certificate/xxxx"
+acm_certificate_arn = ""
+
+# Identifiants RDS (utilisez des valeurs sécurisées !)
+db_username = "pritunl_admin"
+db_password = "ChangeMe123!"
+
+# Votre IP publique pour SSH (trouvez-la sur https://ifconfig.me)
+allowed_admin_cidr = "X.X.X.X/32"
